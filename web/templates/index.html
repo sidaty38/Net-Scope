@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetScope - Smart Network Intelligence & Security Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .number {
+            color: #667eea;
+            font-size: 3em;
+            font-weight: bold;
+        }
+        
+        .scan-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr;
+            gap: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        /* NOUVEAU : Style pour champ desactive */
+        .form-group input:disabled {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+            border-color: #ddd;
+        }
+        
+        .scan-type-info {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        
+        .scan-type-info h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .scan-type-info ul {
+            margin-left: 20px;
+            color: #555;
+        }
+        
+        .btn-scan {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .btn-scan:hover {
+            transform: scale(1.02);
+        }
+        
+        .results {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .host-card {
+            background: #f9f9f9;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            display: inline-block;
+            margin: 5px;
+        }
+        
+        .badge.open {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge.high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge.low {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .ports-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .ports-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .ports-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .banner-short {
+            display: block;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #333;
+        }
+        
+        .banner-full {
+            display: none;
+            font-family: monospace;
+            font-size: 0.85em;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        
+        .banner-full.show {
+            display: block;
+        }
+        
+        .btn-toggle-banner {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-top: 8px;
+        }
+        
+        .btn-toggle-banner:hover {
+            background: #5568d3;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .dns-info {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .security-score {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 5px solid #4caf50;
+        }
+        
+        .security-score.GOOD {
+            border-left-color: #4caf50;
+        }
+        
+        .security-score.MEDIUM {
+            border-left-color: #ff9800;
+        }
+        
+        .security-score.LOW {
+            border-left-color: #f44336;
+        }
+        
+        .score-number {
+            font-size: 3em;
+            font-weight: bold;
+            display: inline-block;
+            margin-right: 20px;
+        }
+        
+        .score-number.GOOD {
+            color: #4caf50;
+        }
+        
+        .score-number.MEDIUM {
+            color: #ff9800;
+        }
+        
+        .score-number.LOW {
+            color: #f44336;
+        }
+        
+        .anomalies-section {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .vulnerabilities-section {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .ssl-info {
+            background: #d1ecf1;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .confidence {
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .confidence.high {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .confidence.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .confidence.low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>NetScope</h1>
+            <p>Smart Network Intelligence & Security Scanner</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Scans Totaux</h3>
+                <div class="number" id="total-scans">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Hotes Scannes</h3>
+                <div class="number" id="total-hosts">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Ports Ouverts</h3>
+                <div class="number" id="open-ports">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Alertes</h3>
+                <div class="number" id="alerts">-</div>
+            </div>
+        </div>
+
+        <div class="scan-form">
+            <h2>Lancer un Scan</h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Cible (IP ou Domaine)</label>
+                    <input type="text" id="target" placeholder="Ex: 192.168.1.1 ou google.com" value="192.168.1.6">
+                    <small style="color: #888; margin-top: 5px; display: block;">
+                        IP (192.168.1.1) ou nom de domaine (example.com)
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Type de Scan</label>
+                    <select id="scan-type">
+                        <option value="quick">Quick Scan</option>
+                        <option value="deep">Deep Scan</option>
+                        <option value="custom">Personnalise</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ports (optionnel)</label>
+                    <input type="text" id="ports" placeholder="Ex: 80,443,8000-9000" disabled>
+                    <small style="color: #888; margin-top: 5px; display: block;">
+                        Actif uniquement en mode Personnalise
+                    </small>
+                </div>
+            </div>
+            
+            <div class="scan-type-info" id="scan-type-explanation">
+                <h4>Quick Scan - Decouverte Rapide</h4>
+                <ul>
+                    <li><strong>Ports:</strong> 17 ports communs (22, 80, 443, 3306...)</li>
+                    <li><strong>Techniques:</strong> TCP SYN + Banner Grabbing</li>
+                    <li><strong>Duree:</strong> environ 5-10 secondes</li>
+                    <li><strong>Usage:</strong> Decouverte rapide des services</li>
+                </ul>
+            </div>
+            
+            <button class="btn-scan" onclick="startScan()">Scanner</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Scan en cours... Veuillez patienter</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <h2>Resultats du Scan</h2>
+            <div id="results-content"></div>
+        </div>
+    </div>
+
+    <script>
+        loadStatistics();
+
+        // NOUVEAU : Gestion activation/desactivation du champ ports
+        document.getElementById('scan-type').addEventListener('change', function() {
+            const explanationDiv = document.getElementById('scan-type-explanation');
+            const portsInput = document.getElementById('ports');
+            const type = this.value;
+            
+            // Activer/desactiver le champ ports selon le type
+            if (type === 'custom') {
+                portsInput.disabled = false;
+                portsInput.style.backgroundColor = 'white';
+            } else {
+                portsInput.disabled = true;
+                portsInput.style.backgroundColor = '#f5f5f5';
+                portsInput.value = '';  // Vider le champ
+            }
+            
+            // Mettre a jour l'explication
+            if (type === 'quick') {
+                explanationDiv.innerHTML = `
+                    <h4>Quick Scan - Decouverte Rapide</h4>
+                    <ul>
+                        <li><strong>Ports:</strong> 17 ports communs (22, 80, 443, 3306...)</li>
+                        <li><strong>Techniques:</strong> TCP SYN + Banner Grabbing</li>
+                        <li><strong>Duree:</strong> environ 5-10 secondes</li>
+                        <li><strong>Usage:</strong> Decouverte rapide des services</li>
+                    </ul>
+                `;
+            } else if (type === 'deep') {
+                explanationDiv.innerHTML = `
+                    <h4>Deep Scan - Analyse Complete</h4>
+                    <ul>
+                        <li><strong>Ports:</strong> 17 ports TCP + 11 ports UDP</li>
+                        <li><strong>Techniques:</strong> TCP + UDP + Banner AVANCE + ML Detection + Analyse securite</li>
+                        <li><strong>Duree:</strong> environ 30-60 secondes</li>
+                        <li><strong>Usage:</strong> Analyse complete avec detection vulnerabilites</li>
+                    </ul>
+                `;
+            } else {
+                explanationDiv.innerHTML = `
+                    <h4>Scan Personnalise - Sur Mesure</h4>
+                    <ul>
+                        <li><strong>Ports:</strong> Ceux que VOUS specifiez ci-dessus</li>
+                        <li><strong>Techniques:</strong> TCP SYN + Banner AVANCE</li>
+                        <li><strong>Duree:</strong> Variable selon le nombre de ports</li>
+                        <li><strong>Usage:</strong> Scanner des ports specifiques</li>
+                    </ul>
+                `;
+            }
+        });
+
+        function loadStatistics() {
+            fetch('/api/statistics')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-scans').textContent = data.total_scans || 0;
+                    document.getElementById('total-hosts').textContent = data.total_hosts || 0;
+                    document.getElementById('open-ports').textContent = data.total_open_ports || 0;
+                    document.getElementById('alerts').textContent = data.unread_alerts || 0;
+                });
+        }
+
+        function startScan() {
+            const target = document.getElementById('target').value.trim();
+            const scanType = document.getElementById('scan-type').value;
+            const ports = document.getElementById('ports').value.trim();
+
+            if (!target) {
+                showError('Veuillez entrer une cible (IP ou nom de domaine)');
+                return;
+            }
+
+            // Verification pour custom scan
+            if (scanType === 'custom' && !ports) {
+                showError('Veuillez specifier les ports pour un scan personnalise');
+                return;
+            }
+
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('loading').classList.add('show');
+
+            const data = {
+                target: target,
+                scan_type: scanType
+            };
+
+            if (ports && scanType === 'custom') {
+                data.ports = ports;
+            }
+
+            fetch('/api/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').classList.remove('show');
+                
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    displayResults(data);
+                    loadStatistics();
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').classList.remove('show');
+                showError('Erreur: ' + error.message);
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function toggleBanner(bannerId) {
+            const bannerDiv = document.getElementById(bannerId);
+            const button = event.target;
+            
+            if (bannerDiv.classList.contains('show')) {
+                bannerDiv.classList.remove('show');
+                button.textContent = 'Voir plus';
+            } else {
+                bannerDiv.classList.add('show');
+                button.textContent = 'Voir moins';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results-content');
+            let html = '';
+
+            html += `<div class="host-card">`;
+            html += `<p><strong>Scan ID:</strong> ${data.scan_id}</p>`;
+            html += `<p><strong>Cible:</strong> ${data.target}</p>`;
+            
+            if (data.is_domain) {
+                html += `<div class="dns-info"><strong>Resolu:</strong> ${data.hostname} → ${data.target_ip}</div>`;
+            }
+            
+            html += `<p><strong>Types:</strong> ${data.scan_types}</p>`;
+            html += `<p><strong>Duree:</strong> ${data.duration}</p>`;
+            html += `</div>`;
+
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(hostResult => {
+                    html += `<div class="host-card">`;
+                    html += `<h3>Hote: ${hostResult.ip}</h3>`;
+                    
+                    let openCountTCP = 0;
+                    if (hostResult.scans && hostResult.scans.TCP_SYN) {
+                        openCountTCP = hostResult.scans.TCP_SYN.open_ports ? hostResult.scans.TCP_SYN.open_ports.length : 0;
+                    }
+                    
+                    let openCountUDP = 0;
+                    if (hostResult.scans && hostResult.scans.UDP_SCANNER) {
+                        openCountUDP = hostResult.scans.UDP_SCANNER.open_ports ? hostResult.scans.UDP_SCANNER.open_ports.length : 0;
+                    }
+                    
+                    html += `<span class="badge open">${openCountTCP} ports TCP ouverts</span>`;
+                    if (openCountUDP > 0) {
+                        html += `<span class="badge open">${openCountUDP} ports UDP ouverts</span>`;
+                    }
+
+                    if (hostResult.scans && hostResult.scans.SERVICE_DETECTOR) {
+                        const mlScan = hostResult.scans.SERVICE_DETECTOR;
+                        const securityScore = mlScan.security_score;
+                        
+                        if (securityScore) {
+                            html += `<div class="security-score ${securityScore.level}">`;
+                            html += `<span class="score-number ${securityScore.level}">${securityScore.score}/100</span>`;
+                            html += `<div style="display: inline-block; vertical-align: middle;">`;
+                            html += `<strong>Score de Securite: ${securityScore.level}</strong><br>`;
+                            html += `<small>${securityScore.total_services} services - ${securityScore.total_vulnerabilities} vulnerabilites</small>`;
+                            html += `</div>`;
+                            
+                            if (securityScore.issues && securityScore.issues.length > 0) {
+                                html += `<div style="margin-top: 10px;">`;
+                                html += `<strong>Problemes identifies:</strong><ul style="margin-left: 20px; margin-top: 5px;">`;
+                                securityScore.issues.forEach(issue => {
+                                    html += `<li>${issue}</li>`;
+                                });
+                                html += `</ul></div>`;
+                            }
+                            html += `</div>`;
+                        }
+                        
+                        if (mlScan.anomalies && mlScan.anomalies.length > 0) {
+                            html += `<div class="anomalies-section">`;
+                            html += `<strong>Anomalies Detectees:</strong><ul style="margin-left: 20px; margin-top: 10px;">`;
+                            mlScan.anomalies.forEach(anomaly => {
+                                const sevBadge = anomaly.severity;
+                                html += `<li><span class="badge ${sevBadge}">${sevBadge.toUpperCase()}</span> ${anomaly.description}</li>`;
+                            });
+                            html += `</ul></div>`;
+                        }
+                    }
+
+                    if (hostResult.scans && hostResult.scans.BANNER_GRABBER) {
+                        const vulns = hostResult.scans.BANNER_GRABBER.vulnerabilities || [];
+                        if (vulns.length > 0) {
+                            html += `<div class="vulnerabilities-section">`;
+                            html += `<strong>Vulnerabilites Potentielles:</strong><ul style="margin-left: 20px; margin-top: 10px;">`;
+                            vulns.forEach(vuln => {
+                                html += `<li>${vuln}</li>`;
+                            });
+                            html += `</ul></div>`;
+                        }
+                    }
+
+                    let bannerInfo = {};
+                    if (hostResult.scans && hostResult.scans.BANNER_GRABBER) {
+                        const services = hostResult.scans.BANNER_GRABBER.services || [];
+                        services.forEach(svc => {
+                            bannerInfo[svc.port] = svc;
+                        });
+                    }
+
+                    if (openCountTCP > 0) {
+                        html += `<h4 style="margin-top: 20px;">Ports TCP</h4>`;
+                        html += `<table class="ports-table">`;
+                        html += `<thead><tr><th>Port</th><th>Etat</th><th>Service</th><th>Version</th><th>Confiance</th><th>Banniere</th></tr></thead>`;
+                        html += `<tbody>`;
+
+                        hostResult.scans.TCP_SYN.open_ports.forEach(port => {
+                            const portNum = port.port || port;
+                            const service = port.service || 'unknown';
+                            const banner = bannerInfo[portNum];
+
+                            html += `<tr>`;
+                            html += `<td><strong>${portNum}</strong></td>`;
+                            html += `<td><span class="badge open">open</span></td>`;
+                            html += `<td>${banner ? banner.service : service}</td>`;
+                            
+                            html += `<td>`;
+                            if (banner && banner.version && banner.version !== 'unknown') {
+                                html += banner.version;
+                            } else {
+                                html += `<span style="color: #999;">N/A</span>`;
+                            }
+                            html += `</td>`;
+                            
+                            html += `<td>`;
+                            if (banner && banner.confidence) {
+                                html += `<span class="confidence ${banner.confidence}">${banner.confidence}</span>`;
+                            } else {
+                                html += `<span style="color: #999;">-</span>`;
+                            }
+                            html += `</td>`;
+                            
+                            html += `<td>`;
+                            if (banner && banner.banner && banner.banner !== 'No banner received' && !banner.banner.includes('No banner')) {
+                                const bannerId = `banner-${hostResult.ip.replace(/\./g, '-')}-${portNum}`;
+                                const shortBanner = banner.banner.substring(0, 80);
+                                const needsToggle = banner.banner.length > 80;
+                                
+                                html += `<span class="banner-short">${shortBanner}${needsToggle ? '...' : ''}</span>`;
+                                
+                                if (needsToggle) {
+                                    html += `<br><button class="btn-toggle-banner" onclick="toggleBanner('${bannerId}')">Voir plus</button>`;
+                                    html += `<div id="${bannerId}" class="banner-full">${banner.banner}</div>`;
+                                }
+                                
+                                if (banner.ssl_info && Object.keys(banner.ssl_info).length > 0) {
+                                    const ssl = banner.ssl_info;
+                                    html += `<div class="ssl-info" style="margin-top: 10px;">`;
+                                    html += `<strong>SSL/TLS:</strong><br>`;
+                                    if (ssl.common_name) html += `CN: ${ssl.common_name}<br>`;
+                                    if (ssl.organization) html += `Org: ${ssl.organization}<br>`;
+                                    if (ssl.tls_version) html += `TLS: ${ssl.tls_version}<br>`;
+                                    html += `</div>`;
+                                }
+                                
+                                if (banner.http_headers && Object.keys(banner.http_headers).length > 0) {
+                                    html += `<div style="margin-top: 10px; font-size: 0.85em;">`;
+                                    html += `<strong>Headers:</strong><br>`;
+                                    for (const [key, value] of Object.entries(banner.http_headers)) {
+                                        html += `<code>${key}: ${value}</code><br>`;
+                                    }
+                                    html += `</div>`;
+                                }
+                                
+                                if (banner.collection_method && banner.collection_method.length > 0) {
+                                    html += `<div style="margin-top: 5px; font-size: 0.8em; color: #666;">`;
+                                    html += `Methode: ${banner.collection_method.join(', ')}`;
+                                    html += `</div>`;
+                                }
+                            } else {
+                                html += `<span style="color: #999;">N/A</span>`;
+                            }
+                            html += `</td>`;
+                            html += `</tr>`;
+                        });
+
+                        html += `</tbody></table>`;
+                    }
+                    
+                    if (openCountUDP > 0) {
+                        html += `<h4 style="margin-top: 20px;">Ports UDP</h4>`;
+                        html += `<table class="ports-table">`;
+                        html += `<thead><tr><th>Port</th><th>Etat</th><th>Service</th></tr></thead>`;
+                        html += `<tbody>`;
+                        
+                        hostResult.scans.UDP_SCANNER.open_ports.forEach(port => {
+                            html += `<tr>`;
+                            html += `<td><strong>${port.port}</strong></td>`;
+                            html += `<td><span class="badge open">${port.state}</span></td>`;
+                            html += `<td>${port.service}</td>`;
+                            html += `</tr>`;
+                        });
+                        
+                        html += `</tbody></table>`;
+                    }
+                    
+                    html += `</div>`;
+                });
+            }
+
+            resultsDiv.innerHTML = html;
+            document.getElementById('results').classList.add('show');
+        }
+    </script>
+</body>
+</html>

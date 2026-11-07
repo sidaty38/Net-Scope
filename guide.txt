@@ -1,0 +1,124 @@
+# 🔍 NetScope — Smart Network Intelligence Framework
+
+**NetScope** est un mini-framework de scan réseau **modulaire** développé en **Python**. Il combine des techniques classiques de reconnaissance (scan TCP SYN, scan UDP, banner grabbing) avec une détection de services assistée par pattern matching / Machine Learning léger, un **score de sécurité** automatique et un **dashboard web**.
+
+Projet pédagogique réalisé à l'**ESMT** (École Supérieure Multinationale des Télécommunications, Dakar) dans le cadre du Master SSI, sous la direction de **M. Moustapha DER**.
+
+> ⚠️ **Avertissement légal et éthique** : n'utilisez NetScope que sur des systèmes dont vous êtes propriétaire ou pour lesquels vous disposez d'une **autorisation écrite explicite**. Un scan non autorisé peut être illégal.
+
+---
+
+## ✨ Fonctionnalités
+
+- **Scan TCP** (découverte des ports ouverts / fermés / filtrés)
+- **Scan UDP** sur les ports courants (analyse des réponses et des messages ICMP)
+- **Banner grabbing** (versions SSH, serveurs web, FTP… via en-têtes et bannières)
+- **Détection de services** (pattern matching + classification ML légère)
+- **Inspection SSL/TLS** et scan de sous-réseau
+- **Score de sécurité (0–100)** avec anomalies détectées et recommandations
+- **Dashboard web** (Flask) avec statistiques et historique des scans
+- **Persistance SQLite** et export JSON
+- **Quick Scan** (rapide, ports courants) et **Deep Scan** (TCP + UDP + banner avancé + détection ML)
+- Aucun privilège root requis
+
+## 🧱 Architecture
+
+```
+netscope/
+├── core/
+│   ├── engine.py          # Moteur : orchestration, multithreading, normalisation des résultats
+│   ├── plugin_manager.py  # Chargement dynamique des plugins (PluginBase)
+│   └── utils.py           # Validation IP / ports, résolution DNS
+├── plugins/
+│   ├── tcp_syn_scanner.py
+│   ├── udp_scanner.py
+│   ├── banner_grabber.py
+│   └── service_detector.py
+├── web/
+│   ├── dashboard.py       # API REST Flask
+│   └── index.html         # Interface web
+├── storage/
+│   └── database.py        # Persistance SQLite
+├── config/
+│   └── settings.py        # Paramètres globaux (timeouts, threads, retries…)
+├── tests/
+├── main.py                # Point d'entrée CLI
+├── quickstart.sh          # Menu interactif de démarrage rapide
+└── requirements.txt
+```
+
+Chaque plugin hérite de la classe abstraite `PluginBase` et expose `run(target, **kwargs)` et `get_info()`. Le `PluginManager` scanne le dossier `plugins/` au démarrage et enregistre automatiquement tout nouveau module.
+
+## 🚀 Installation
+
+```bash
+git clone https://github.com/<votre-compte>/netscope.git
+cd netscope
+pip install -r requirements.txt
+```
+
+Prérequis : Python 3.8+ (testé sous Kali Linux).
+
+## 💻 Utilisation
+
+**Ligne de commande**
+
+```bash
+# Scan rapide (17 ports courants : TCP + banner grabbing)
+python3 main.py -t 192.168.1.27 --quick
+```
+
+**Dashboard web**
+
+```bash
+python3 web/dashboard.py
+# puis ouvrir http://localhost:5000
+```
+
+Depuis le dashboard, saisissez une IP ou un nom de domaine, choisissez *Quick Scan* ou *Deep Scan* (et éventuellement une liste de ports : `80`, `80,443`, `8000-8100`, `80,443,8000-8100`).
+
+## 🛡️ Sécurité et robustesse
+
+- **Validation des entrées** : IP (module `ipaddress`, IPv4), ports (1–65535, dédupliqués), résolution DNS puis re-validation de l'IP obtenue
+- **Gestion des erreurs à 3 niveaux** : validation préventive, timeouts configurables, capture des exceptions sans interrompre le scan
+- **Limitation du trafic** : 50 threads max (`ThreadPoolExecutor`), délai de 10 ms entre scans, 2 tentatives max par port
+
+## 🧩 Ajouter un plugin
+
+1. Créer un fichier Python dans `plugins/`
+2. Définir une classe héritant de `PluginBase`
+3. Implémenter `run()` et `get_info()`
+4. Relancer NetScope : le plugin est chargé automatiquement
+
+## 🧪 Résultats de test
+
+| Scénario | Cible | Mode | Résultat |
+|---|---|---|---|
+| A | Machine locale | Quick Scan (CLI) | Scan en ~1 s, port 445 (SMB) détecté |
+| B | Domaine public | Deep Scan (dashboard) | Ports web détectés derrière Cloudflare, score de sécurité 95/100 |
+
+## ⚖️ NetScope vs Nmap
+
+NetScope couvre un **sous-ensemble** de Nmap, orienté pédagogie : plus lent (connexions Python, GIL), sans détection d'OS, sans moteur de scripts (NSE), sans IPv6 et avec une couverture UDP limitée (11 ports). En contrepartie : dashboard web, score de sécurité automatique, historique SQLite, code lisible et facilement modifiable.
+
+## 🗺️ Pistes d'amélioration
+
+- Meilleure interprétation du scan UDP et gestion fine des états de ports
+- OS fingerprinting et base de signatures de services vulnérables
+- Scan de plages IP complètes, meilleure parallélisation
+- Graphiques, filtres avancés et export de rapports (PDF / HTML / JSON)
+- Support IPv6
+
+## 👥 Équipe
+
+- Mame Astou BAO
+- Pape Siriman CISSOKO
+- Mouhamad Said LY
+- Sidaty MOHAMED MAHMOUD
+- Alex Francie Edma NTOUNTA
+
+Encadrant : M. Moustapha DER — ESMT, Dakar
+
+## 📄 Licence
+
+À définir (ex. MIT) — usage éducatif.

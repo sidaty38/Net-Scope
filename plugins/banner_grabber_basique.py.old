@@ -1,0 +1,242 @@
+"""
+Plugin de Banner Grabbing pour NetScope
+Récupère les bannières des services pour identifier les versions
+"""
+import socket
+import sys
+import os
+from typing import Dict, Any, Optional
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from core.plugin_manager import PluginBase
+from core.utils import validate_ip
+from config.settings import SCAN_CONFIG
+
+class BannerGrabber(PluginBase):
+    """Banner Grabber pour identification de services"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "BANNER_GRABBER"
+        self.description = "Récupération de bannières pour identification de services"
+        self.version = "1.0"
+        
+        # Probes pour différents services
+        self.service_probes = {
+            21: b'',  # FTP
+            22: b'',  # SSH
+            25: b'EHLO netscope\r\n',  # SMTP
+            80: b'GET / HTTP/1.0\r\n\r\n',  # HTTP
+            110: b'',  # POP3
+            143: b'',  # IMAP
+            443: b'',  # HTTPS (nécessite SSL)
+            3306: b'',  # MySQL
+            5432: b'',  # PostgreSQL
+            6379: b'PING\r\n',  # Redis
+            27017: b'',  # MongoDB
+        }
+    
+    def get_info(self) -> Dict[str, str]:
+        """Retourne les informations du plugin"""
+        return {
+            'name': self.name,
+            'description': self.description,
+            'version': self.version
+        }
+    
+    def validate_input(self, target: str) -> bool:
+        """Valide l'IP cible"""
+        return validate_ip(target)
+    
+    def grab_banner(self, ip: str, port: int, timeout: float = 2.0) -> Optional[str]:
+        """
+        Récupère la bannière d'un service
+        
+        Args:
+            ip: IP cible
+            port: Port du service
+            timeout: Timeout
+            
+        Returns:
+            Bannière du service ou None
+        """
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+            sock.connect((ip, port))
+            
+            # Envoi du probe si disponible
+            probe = self.service_probes.get(port, b'')
+            if probe:
+                sock.send(probe)
+            
+            # Réception de la bannière
+            banner = sock.recv(4096)
+            sock.close()
+            
+            # Décodage
+            try:
+                return banner.decode('utf-8', errors='ignore').strip()
+            except:
+                return banner.decode('latin-1', errors='ignore').strip()
+                
+        except socket.timeout:
+            return None
+        except ConnectionRefusedError:
+            return None
+        except Exception as e:
+            return None
+    
+    def analyze_banner(self, banner: str, port: int) -> Dict[str, str]:
+        """
+        Analyse la bannière pour extraire des informations
+        
+        Args:
+            banner: Bannière récupérée
+            port: Port du service
+            
+        Returns:
+            Informations extraites
+        """
+        info = {
+            'service': 'unknown',
+            'version': 'unknown',
+            'details': ''
+        }
+        
+        banner_lower = banner.lower()
+        
+        # Détection du service
+        if 'ssh' in banner_lower:
+            info['service'] = 'SSH'
+            # Extraction version SSH
+            if 'openssh' in banner_lower:
+                parts = banner.split()
+                for part in parts:
+                    if 'openssh' in part.lower():
+                        info['version'] = part
+        
+        elif 'ftp' in banner_lower or port == 21:
+            info['service'] = 'FTP'
+            info['details'] = banner[:100]
+        
+        elif 'http' in banner_lower or 'server:' in banner_lower:
+            info['service'] = 'HTTP'
+            # Extraction du serveur
+            for line in banner.split('\n'):
+                if 'server:' in line.lower():
+                    info['version'] = line.split(':', 1)[1].strip()
+        
+        elif 'smtp' in banner_lower or port == 25:
+            info['service'] = 'SMTP'
+            info['details'] = banner[:100]
+        
+        elif 'mysql' in banner_lower:
+            info['service'] = 'MySQL'
+        
+        elif 'postgresql' in banner_lower:
+            info['service'] = 'PostgreSQL'
+        
+        elif 'redis' in banner_lower or 'pong' in banner_lower:
+            info['service'] = 'Redis'
+        
+        elif 'mongodb' in banner_lower:
+            info['service'] = 'MongoDB'
+        
+        elif 'pop3' in banner_lower or port == 110:
+            info['service'] = 'POP3'
+            info['details'] = banner[:100]
+        
+        elif 'imap' in banner_lower or port == 143:
+            info['service'] = 'IMAP'
+            info['details'] = banner[:100]
+        
+        else:
+            info['details'] = banner[:200]
+        
+        return info
+    
+    def check_vulnerabilities(self, service_info: Dict[str, str]) -> List[str]:
+        """
+        Vérifie des vulnérabilités connues basées sur la version
+        
+        Args:
+            service_info: Informations du service
+            
+        Returns:
+            Liste de vulnérabilités potentielles
+        """
+        from config.settings import SECURITY_THRESHOLDS
+        
+        vulnerabilities = []
+        version = service_info.get('version', '').lower()
+        
+        # Vérification des versions obsolètes
+        for outdated in SECURITY_THRESHOLDS['outdated_versions']:
+            if outdated.lower() in version:
+                vulnerabilities.append(f"Version obsolète détectée: {outdated}")
+        
+        # Vérification des bannières suspectes
+        details = service_info.get('details', '').lower()
+        for suspicious in SECURITY_THRESHOLDS['suspicious_banners']:
+            if suspicious in details:
+                vulnerabilities.append(f"Bannière suspecte: {suspicious}")
+        
+        return vulnerabilities
+    
+    def run(self, target: str, **kwargs) -> Dict[str, Any]:
+        """
+        Exécute le banner grabbing
+        
+        Args:
+            target: IP cible
+            **kwargs: ports (liste de ports ouverts)
+            
+        Returns:
+            Résultats du banner grabbing
+        """
+        # Récupération des ports ouverts depuis le scan TCP
+        open_ports = kwargs.get('ports', [])
+        timeout = kwargs.get('timeout', SCAN_CONFIG['timeout'])
+        
+        # Si on reçoit une structure complexe, extraire les ports
+        if open_ports and isinstance(open_ports[0], dict):
+            open_ports = [p['port'] for p in open_ports]
+        
+        results = {
+            'ip': target,
+            'services': [],
+            'vulnerabilities': [],
+            'scan_type': 'Banner Grabbing'
+        }
+        
+        for port in open_ports:
+            print(f"[*] Banner grabbing sur {target}:{port}...")
+            
+            banner = self.grab_banner(target, port, timeout)
+            
+            if banner:
+                service_info = self.analyze_banner(banner, port)
+                service_info['port'] = port
+                service_info['banner'] = banner[:500]  # Limiter la taille
+                
+                # Vérification de vulnérabilités
+                vulns = self.check_vulnerabilities(service_info)
+                if vulns:
+                    service_info['vulnerabilities'] = vulns
+                    results['vulnerabilities'].extend(vulns)
+                
+                results['services'].append(service_info)
+            else:
+                results['services'].append({
+                    'port': port,
+                    'service': 'unknown',
+                    'banner': 'No banner received'
+                })
+        
+        results['summary'] = f"{len(results['services'])} services identifiés"
+        if results['vulnerabilities']:
+            results['summary'] += f", {len(results['vulnerabilities'])} vulnérabilités potentielles"
+        
+        return results
